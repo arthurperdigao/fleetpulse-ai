@@ -98,11 +98,11 @@
 
 - [x] **Semana 1:** spike de viabilidade (concluído) · adapter de coleta (concluído) · gravação de HAR / fixtures (concluído) · schema Zod pt-BR (concluído) · Postgres/TimescaleDB DDL (concluído) · persistência e repositório (concluído) · pacote @fleetpulse/banco com testes unitários e de integração reais (concluído)
 - [x] **Semana 2:** validação de qualidade e detecção de anomalias com z-score robusto / MAD em `@fleetpulse/deteccao` (concluído) · `RepositorioInsights` no `@fleetpulse/banco` (concluído) · geração de narrativas com LLM e validador pós-resposta anti-alucinação (concluído) · 38 testes automatizados aprovados (concluído)
-- [ ] **Semana 3:** pgvector (embeddings de narrativas no PostgreSQL) · agente com 3 tools em TypeScript · validador de números no chat · loop de feedback
-- [ ] **Semana 4:** UI Next.js (chat + painel) · evals no CI · README · vídeo 60s · post LinkedIn
+- [x] **Semana 3:** pgvector (embeddings de 1536 dimensões indexados com HNSW) · agente com 3 tools em TypeScript (SQL leitor_agente, busca semântica vetorial, cálculo gap determinístico) · validador de números no chat · loop de feedback humano (Human-in-the-Loop) · Fastify API em `apps/api` · 53 testes automatizados aprovados (concluído)
+- [ ] **Semana 4:** UI Next.js (chat interativo + painel de observabilidade) · evals no CI · README · vídeo 60s · post LinkedIn
 
-**Ponto exato onde paramos:** Semana 2 100% concluída. `pacotes/deteccao` implementado com Z-score robusto, detectores de anomalias, `ProvedorSimulado`, `ProvedorHttp` nativo, `ValidadorNumerico` pós-resposta (auditoria que barra alucinação) e `GeradorNarrativa`. Total de 38 testes automatizados passando no Vitest com 100% de sucesso.
-**Ação imediata ao retomar:** Iniciar a Semana 3 do roadmap: geração e busca vetorial de embeddings com `pgvector` na tabela `insights`, e desenvolvimento do Agente de IA com as 3 tools especializadas em TypeScript.
+**Ponto exato onde paramos:** Semana 3 100% concluída. `apps/api` implementado com Fastify, rotas `/api/chat`, `/api/insights`, `/api/cotacoes`, `/api/saude`. `AgenteObservabilidade` com as 3 tools e `ValidadorRespostaChat`. Total de 53 testes automatizados passando no Vitest com 100% de sucesso em todos os pacotes.
+**Ação imediata ao retomar:** Iniciar a Semana 4 do roadmap: criação do aplicativo web interativo em Next.js (`apps/web`) para o painel de observabilidade de preços e interface de chat com o Agente FleetPulse AI.
 
 ## 12. Diário de métricas
 
@@ -132,16 +132,16 @@
 fleetpulse/
 ├── apps/
 │   ├── coletor/       # Playwright + adaptadores (ao vivo | replay) + ServicoColeta
-│   ├── api/           # Fastify: agente, tools, validador
+│   ├── api/           # Fastify: agente, 3 tools, validador de chat, rotas
 │   └── web/           # Next.js: chat + painel
 ├── pacotes/
 │   ├── esquemas/      # Zod compartilhado (pt-BR)
-│   ├── banco/         # Pool pg, RepositorioCotacoes, RepositorioInsights (TimescaleDB)
+│   ├── banco/         # Pool pg, RepositorioCotacoes, RepositorioInsights, pgvector, feedback
 │   └── deteccao/      # z-score robusto, detectores e narrador LLM com validador anti-alucinação
 ├── evals/             # golden questions + runner
 ├── fixtures/har/      # cotações e respostas gravadas
 ├── docs/adr/          # decisões e trade-offs (ADR 0001, ADR 0002)
-├── banco/             # init.sql com TimescaleDB + pgvector
+├── banco/             # init.sql com TimescaleDB + pgvector + HNSW
 ├── PROJECT_MEMORY.md
 └── docker-compose.yml
 ```
@@ -160,6 +160,8 @@ fleetpulse/
 - **12/10/2026 (Sessão 3):** Inicialização do Docker com porta configurável 5433 para evitar conflito com instâncias locais; container TimescaleDB com pgvector validado e saudável; criação do pacote compartilhado `@fleetpulse/banco` com conexão, pool e `RepositorioCotacoes` (suporte a inserção em lote otimizada para séries temporais e filtros dinâmicos); criação do `ServicoColeta` em `apps/coletor`; suíte com 11 testes unitários e de integração real passando no Vitest com 100% de sucesso.
 - **12/10/2026 (Sessão 4):** Criação do pacote `@fleetpulse/deteccao` com estatística robusta determinística (mediana, MAD e Z-score modificado com fator normal 1.4826 imune a outliers); implementação dos detectores especializados (`pico_preco`, `concorrente_mais_barato`, `queda_disponibilidade`); implementação do `MotorDeteccao` unificado; implementação do `RepositorioInsights` no `@fleetpulse/banco` com suporte a persistência em lote e atualização de status para human-in-the-loop; suíte com 30 testes unitários e de integração reais passando com 100% no Vitest.
 - **12/10/2026 (Sessão 5):** Implementação da Etapa 5 do pipeline ("Explain: LLM gera narrativa para anomalias"); criação dos contratos de LLM, `ProvedorSimulado` (para testes e CI determinísticos) e `ProvedorHttp` (OpenAI / Gemini / Ollama); implementação do `ValidadorNumerico` pós-resposta (audita todos os números citados pelo LLM contra as métricas calculadas para garantir zero alucinação numérica); implementação do `GeradorNarrativa` com retry e fallback seguro; 38 testes passando com 100% de aprovação.
+- **12/10/2026 (Sessão 6):** Implementação da Semana 3 completa: índice HNSW vetorial no PostgreSQL/TimescaleDB; serviço de embeddings determinístico e HTTP; busca por similaridade de cosseno no `RepositorioInsights`; `RepositorioFeedback` para Human-in-the-Loop; perfil de conexão restrito `leitor_agente` com bloqueio de mutações; criação de `apps/api` com Fastify e rotas `/api/chat`, `/api/insights`, `/api/cotacoes`, `/api/saude`; implementação das 3 ferramentas especializadas (`ferramentaConsultaSql`, `ferramentaBuscaSemantica`, `ferramentaCalculoGap`); implementação do `AgenteObservabilidade` e do `ValidadorRespostaChat`; 53 testes automatizados passando 100% no Vitest.
+
 
 
 

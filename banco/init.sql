@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS insights (
 CREATE INDEX IF NOT EXISTS idx_insights_praca_categoria 
 ON insights (praca, categoria, detectado_em DESC);
 
+CREATE INDEX IF NOT EXISTS idx_insights_embedding 
+ON insights USING hnsw (embedding vector_cosine_ops);
+
 -- 4. Tabela de Feedback Humano (Human-in-the-loop para refinamento do RAG)
 CREATE TABLE IF NOT EXISTS feedback (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

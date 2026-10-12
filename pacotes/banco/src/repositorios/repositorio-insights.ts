@@ -18,6 +18,18 @@ export interface FiltroInsights {
   limite?: number;
 }
 
+export interface OpcoesBuscaSimilaridade {
+  limite?: number;
+  praca?: Praca;
+  categoria?: Categoria;
+  limiarSimilaridade?: number; // Padrão: 0.0 (retorna os mais próximos)
+}
+
+export interface InsightSimilar extends InsightAnomalia {
+  similaridade: number;
+  correcaoHumana?: string;
+}
+
 /**
  * Converte linha do banco (snake_case) para a entidade InsightAnomalia (camelCase)
  */
@@ -36,8 +48,12 @@ export function mapearLinhaParaInsight(linha: any): InsightAnomalia {
   });
 }
 
+function formatarVetorParaPg(vetor: number[]): string {
+  return `[${vetor.join(',')}]`;
+}
+
 /**
- * Repositório para persistência e consulta de insights e anomalias de mercado.
+ * Repositório para persistência, busca relacional e busca semântica vetorial (pgvector) de insights.
  */
 export class RepositorioInsights {
   private pool: pg.Pool;
@@ -47,9 +63,9 @@ export class RepositorioInsights {
   }
 
   /**
-   * Salva um único insight no banco de dados.
+   * Salva um único insight no banco de dados, com embedding vetorial opcional.
    */
-  async salvar(insight: InsightAnomalia): Promise<InsightAnomalia> {
+  async salvar(insight: InsightAnomalia, embedding?: number[]): Promise<InsightAnomalia> {
     const validado = EsquemaInsightAnomalia.parse(insight);
 
     const consulta = `
@@ -62,9 +78,10 @@ export class RepositorioInsights {
         periodo,
         metricas,
         narrativa,
+        embedding,
         status
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
       )
       RETURNING *;
     `;
@@ -78,6 +95,7 @@ export class RepositorioInsights {
       validado.periodo,
       JSON.stringify(validado.metricas),
       validado.narrativa,
+      embedding ? formatarVetorParaPg(embedding) : null,
       validado.status
     ];
 
@@ -139,7 +157,67 @@ export class RepositorioInsights {
   }
 
   /**
-   * Busca insights por filtros dinâmicos com ordenação mais recente primeiro.
+   * Busca semântica vetorial no pgvector usando similaridade de cosseno (operador <=>).
+   * Cruza também com o feedback humano caso o insight tenha recebido correção.
+   */
+  async buscarSimilares(
+    embedding: number[],
+    opcoes: OpcoesBuscaSimilaridade = {}
+  ): Promise<InsightSimilar[]> {
+    const vetorString = formatarVetorParaPg(embedding);
+    const condicoes: string[] = ['i.embedding IS NOT NULL'];
+    const parametros: any[] = [vetorString];
+    let contador = 2;
+
+    if (opcoes.praca) {
+      condicoes.push(`i.praca = $${contador++}`);
+      parametros.push(opcoes.praca);
+    }
+
+    if (opcoes.categoria) {
+      condicoes.push(`i.categoria = $${contador++}`);
+      parametros.push(opcoes.categoria);
+    }
+
+    const limite = opcoes.limite ? Number(opcoes.limite) : 5;
+    parametros.push(limite);
+    const posicaoLimite = contador;
+
+    const consulta = `
+      SELECT 
+        i.id,
+        i.detectado_em,
+        i.tipo,
+        i.severidade,
+        i.praca,
+        i.categoria,
+        i.periodo,
+        i.metricas,
+        i.narrativa,
+        i.status,
+        ROUND((1 - (i.embedding <=> $1::vector))::numeric, 4)::float as similaridade,
+        f.correcao as correcao_humana
+      FROM insights i
+      LEFT JOIN feedback f ON f.insight_id = i.id AND f.correcao IS NOT NULL
+      WHERE ${condicoes.join(' AND ')}
+      ORDER BY i.embedding <=> $1::vector ASC
+      LIMIT $${posicaoLimite};
+    `;
+
+    const resultado = await this.pool.query(consulta, parametros);
+
+    return resultado.rows.map((linha) => {
+      const insight = mapearLinhaParaInsight(linha);
+      return {
+        ...insight,
+        similaridade: Number(linha.similaridade),
+        correcaoHumana: linha.correcao_humana || undefined
+      };
+    });
+  }
+
+  /**
+   * Busca insights por filtros dinâmicos relacionais.
    */
   async buscarPorFiltro(filtro: FiltroInsights = {}): Promise<InsightAnomalia[]> {
     const condicoes: string[] = [];
