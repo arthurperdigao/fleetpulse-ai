@@ -4,7 +4,7 @@ services:
     container_name: fleetpulse-banco
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${BANCO_PORTA:-5433}:5432"
     environment:
       POSTGRES_DB: fleetpulse
       POSTGRES_USER: postgres

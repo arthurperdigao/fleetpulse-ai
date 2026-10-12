@@ -96,13 +96,13 @@
 
 ## 11. Roadmap e status
 
-- [/] **Semana 1:** spike de viabilidade (concluído) · adapter de coleta (concluído) · gravação de HAR / fixtures (concluído) · schema Zod pt-BR (concluído) · Postgres/TimescaleDB DDL (concluído) · persistência e repositório (próximo)
-- [ ] **Semana 2:** validação de qualidade · detecção de anomalias · testes unitários · geração de narrativas
+- [x] **Semana 1:** spike de viabilidade (concluído) · adapter de coleta (concluído) · gravação de HAR / fixtures (concluído) · schema Zod pt-BR (concluído) · Postgres/TimescaleDB DDL (concluído) · persistência e repositório (concluído) · pacote @fleetpulse/banco com testes unitários e de integração reais (concluído)
+- [ ] **Semana 2:** validação de qualidade · detecção de anomalias (z-score robusto / MAD em `pacotes/deteccao`) · testes unitários · geração de narrativas
 - [ ] **Semana 3:** pgvector · agente com tools · validador de números · loop de feedback
 - [ ] **Semana 4:** UI Next.js (chat + painel) · evals no CI · README · vídeo 60s · post LinkedIn
 
-**Ponto exato onde paramos:** `docker-compose.yml` e `banco/init.sql` (TimescaleDB + pgvector + DDL em pt-BR) criados e prontos.
-**Ação imediata ao retomar:** Subir o container (`docker compose up -d`) e criar o repositório de dados TypeScript para salvar as cotações geradas pelo `AdaptadorReplay` na tabela `cotacoes`.
+**Ponto exato onde paramos:** Container `fleetpulse-banco` ativo e saudável (porta 5433). Pacote `@fleetpulse/banco` criado com `RepositorioCotacoes` (operações unitárias e lote), `ServicoColeta` em `apps/coletor` integrado, e 11 testes automatizados (unitários + integração real) passando com 100% de sucesso.
+**Ação imediata ao retomar:** Iniciar a Semana 2 do roadmap com a criação de `pacotes/deteccao` (detecção estatística de anomalias com z-score robusto baseado em mediana e MAD, e classificação de eventos de preço).
 
 ## 12. Diário de métricas
 
@@ -131,11 +131,12 @@
 ```
 fleetpulse/
 ├── apps/
-│   ├── coletor/       # Playwright + adaptadores (ao vivo | replay)
+│   ├── coletor/       # Playwright + adaptadores (ao vivo | replay) + ServicoColeta
 │   ├── api/           # Fastify: agente, tools, validador
 │   └── web/           # Next.js: chat + painel
 ├── pacotes/
 │   ├── esquemas/      # Zod compartilhado (pt-BR)
+│   ├── banco/         # Pool pg, RepositorioCotacoes (TimescaleDB)
 │   └── deteccao/      # z-score robusto, eventos
 ├── evals/             # golden questions + runner
 ├── fixtures/har/      # cotações e respostas gravadas
@@ -156,5 +157,7 @@ fleetpulse/
 
 - **12/10/2026 (Sessão 1):** Escolhida a ideia FleetPulse AI; definidos pipeline, escopo do MVP, decisão por Playwright; criado este arquivo.
 - **12/10/2026 (Sessão 2):** Inicialização do Git; monorepo em npm workspaces (`apps/coletor`, `pacotes/esquemas`); regra de código 100% em pt-BR (ADR 0001); Spike da Localiza executado (WAF Akamai 403 mapeado); ADR 0002 (Adaptador Replay vs Ao Vivo); `AdaptadorReplay` testado com Vitest (100% aprovado); criados `docker-compose.yml` e `banco/init.sql` com TimescaleDB e pgvector.
+- **12/10/2026 (Sessão 3):** Inicialização do Docker com porta configurável 5433 para evitar conflito com instâncias locais; container TimescaleDB com pgvector validado e saudável; criação do pacote compartilhado `@fleetpulse/banco` com conexão, pool e `RepositorioCotacoes` (suporte a inserção em lote otimizada para séries temporais e filtros dinâmicos); criação do `ServicoColeta` em `apps/coletor`; suíte com 11 testes unitários e de integração real passando no Vitest com 100% de sucesso.
+
 
 
