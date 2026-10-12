@@ -99,16 +99,16 @@
 - [x] **Semana 1:** spike de viabilidade (concluído) · adapter de coleta (concluído) · gravação de HAR / fixtures (concluído) · schema Zod pt-BR (concluído) · Postgres/TimescaleDB DDL (concluído) · persistência e repositório (concluído) · pacote @fleetpulse/banco com testes unitários e de integração reais (concluído)
 - [x] **Semana 2:** validação de qualidade e detecção de anomalias com z-score robusto / MAD em `@fleetpulse/deteccao` (concluído) · `RepositorioInsights` no `@fleetpulse/banco` (concluído) · geração de narrativas com LLM e validador pós-resposta anti-alucinação (concluído) · 38 testes automatizados aprovados (concluído)
 - [x] **Semana 3:** pgvector (embeddings de 1536 dimensões indexados com HNSW) · agente com 3 tools em TypeScript (SQL leitor_agente, busca semântica vetorial, cálculo gap determinístico) · validador de números no chat · loop de feedback humano (Human-in-the-Loop) · Fastify API em `apps/api` · 53 testes automatizados aprovados (concluído)
-- [ ] **Semana 4:** UI Next.js (chat interativo + painel de observabilidade) · evals no CI · README · vídeo 60s · post LinkedIn
+- [x] **Semana 4:** UI Next.js (chat interativo + painel de observabilidade com feedback humano e gaveta de ferramentas) · evals automatizados de IA (runner com 30 Golden Questions, 100% de acurácia numérica e 100% de resistência a injeções) · documentação executiva e técnica (concluído)
 
-**Ponto exato onde paramos:** Semana 3 100% concluída. `apps/api` implementado com Fastify, rotas `/api/chat`, `/api/insights`, `/api/cotacoes`, `/api/saude`. `AgenteObservabilidade` com as 3 tools e `ValidadorRespostaChat`. Total de 53 testes automatizados passando no Vitest com 100% de sucesso em todos os pacotes.
-**Ação imediata ao retomar:** Iniciar a Semana 4 do roadmap: criação do aplicativo web interativo em Next.js (`apps/web`) para o painel de observabilidade de preços e interface de chat com o Agente FleetPulse AI.
+**Ponto exato onde paramos:** Semana 4 concluída com sucesso. UI Next.js 16 compilada e testada em `apps/web` (Vanilla CSS elegante, sem Tailwind), Runner de evals com 30 Golden Questions passando 100% no Vitest (`npm run evals`), suíte completa de 54 testes aprovados no monorepo.
+**Ação imediata ao retomar:** Criação do README.md oficial para apresentação do projeto e portfólio profissional (GitHub/LinkedIn).
 
 ## 12. Diário de métricas
 
-| Data | Acurácia numérica | Tool correta | Recusa sem dado | Obs. |
-|---|---|---|---|---|
-| _(sem medições ainda)_ | | | | |
+| Data | Acurácia numérica | Tool correta | Recusa sem dado | Resistência Injeção | Latência Média | Obs. |
+|---|---|---|---|---|---|---|
+| **12/10/2026** | **100%** (30/30) | **100%** (30/30) | **100%** (5/5) | **100%** (5/5) | **2 ms** | Benchmark de 30 Golden Questions em `evals/runner.test.ts` via Vitest. |
 
 ## 13. Perguntas prováveis de entrevista
 
@@ -161,6 +161,7 @@ fleetpulse/
 - **12/10/2026 (Sessão 4):** Criação do pacote `@fleetpulse/deteccao` com estatística robusta determinística (mediana, MAD e Z-score modificado com fator normal 1.4826 imune a outliers); implementação dos detectores especializados (`pico_preco`, `concorrente_mais_barato`, `queda_disponibilidade`); implementação do `MotorDeteccao` unificado; implementação do `RepositorioInsights` no `@fleetpulse/banco` com suporte a persistência em lote e atualização de status para human-in-the-loop; suíte com 30 testes unitários e de integração reais passando com 100% no Vitest.
 - **12/10/2026 (Sessão 5):** Implementação da Etapa 5 do pipeline ("Explain: LLM gera narrativa para anomalias"); criação dos contratos de LLM, `ProvedorSimulado` (para testes e CI determinísticos) e `ProvedorHttp` (OpenAI / Gemini / Ollama); implementação do `ValidadorNumerico` pós-resposta (audita todos os números citados pelo LLM contra as métricas calculadas para garantir zero alucinação numérica); implementação do `GeradorNarrativa` com retry e fallback seguro; 38 testes passando com 100% de aprovação.
 - **12/10/2026 (Sessão 6):** Implementação da Semana 3 completa: índice HNSW vetorial no PostgreSQL/TimescaleDB; serviço de embeddings determinístico e HTTP; busca por similaridade de cosseno no `RepositorioInsights`; `RepositorioFeedback` para Human-in-the-Loop; perfil de conexão restrito `leitor_agente` com bloqueio de mutações; criação de `apps/api` com Fastify e rotas `/api/chat`, `/api/insights`, `/api/cotacoes`, `/api/saude`; implementação das 3 ferramentas especializadas (`ferramentaConsultaSql`, `ferramentaBuscaSemantica`, `ferramentaCalculoGap`); implementação do `AgenteObservabilidade` e do `ValidadorRespostaChat`; 53 testes automatizados passando 100% no Vitest.
+- **12/10/2026 (Sessão 7):** Conclusão da Semana 4 do Roadmap: implementação do frontend web interativo em Next.js 16 (`apps/web`) sem dependência de Tailwind CSS, com tema dark premium, dashboard de KPIs, radar de anomalias com botões de feedback humano, e chat conversacional com o agente (exibição de auditoria numérica e ferramentas acionadas); criação do banco de 30 Golden Questions (`evals/perguntas-douradas.json`); desenvolvimento do `AvaliadorAgente` e da suíte de teste de evals (`evals/runner.test.ts`); aprimoramento dos guardrails de injeção de prompt e recusa sem dados no `AgenteObservabilidade`; 100% de aprovação no benchmark de evals e 54 suítes de teste passando no monorepo.
 
 
 

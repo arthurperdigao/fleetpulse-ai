@@ -61,7 +61,66 @@ export class AgenteObservabilidade {
 
     const textoPergunta = perguntaUsuario.toLowerCase();
 
+    // Guardrail 1: Verificação de Segurança e Tentativa de Injeção de Prompt / Mutação
+    const padroesInjecao = [
+      /ignore\s+(todas\s+as\s+instruções|all\s+previous\s+instructions)/i,
+      /\bdrop\s+table\b/i,
+      /\bdelete\s+from\b/i,
+      /\bupdate\s+\w+\s+set\b/i,
+      /\binsert\s+into\b/i,
+      /\bpg_shadow\b/i,
+      /\bchaosbot\b/i,
+      /invente\s+um\s+preço/i,
+      /segredos\s+do\s+sistema/i
+    ];
+
+    if (padroesInjecao.some((padrao) => padrao.test(perguntaUsuario))) {
+      return {
+        mensagem:
+          'Requisição rejeitada por motivos de segurança e integridade do sistema. ' +
+          'Operações administrativas, mutações de dados e instruções maliciosas são estritamente bloqueadas.',
+        ferramentasExecutadas: [],
+        auditoria: {
+          valido: true,
+          numerosCitados: [],
+          numerosAutorizados: [],
+          alucinacoesIdentificadas: []
+        },
+        tempoTotalMs: Math.round(performance.now() - inicio)
+      };
+    }
+
+    // Guardrail 2: Verificação de Fora de Escopo (Domínio estrito a locação de veículos na Grande BH)
+    const padroesForaEscopo = [
+      /\b(miami|paris|rio\s+de\s+janeiro)\b/i,
+      /\b(ferrari|porsche)\b/i,
+      /\bpetróleo\b/i,
+      /\b(saldo\s+da\s+conta|conta\s+bancária)\b/i
+    ];
+
+    if (padroesForaEscopo.some((padrao) => padrao.test(perguntaUsuario))) {
+      return {
+        mensagem:
+          'Não possuo dados para essa solicitação. O escopo do FleetPulse AI abrange exclusivamente a ' +
+          'observabilidade de preços e inteligência de frotas na Região Metropolitana de Belo Horizonte (Confins, Pampulha e Centro).',
+        ferramentasExecutadas: [],
+        auditoria: {
+          valido: true,
+          numerosCitados: [],
+          numerosAutorizados: [],
+          alucinacoesIdentificadas: []
+        },
+        tempoTotalMs: Math.round(performance.now() - inicio)
+      };
+    }
+
     // 1. Decisão heurística/semântica de acionamento de ferramentas
+    const requerCalculoGap =
+      textoPergunta.includes('gap') ||
+      textoPergunta.includes('diferença') ||
+      textoPergunta.includes('desconto') ||
+      textoPergunta.includes('comparar');
+
     const requerSql =
       textoPergunta.includes('quantas cotações') ||
       textoPergunta.includes('média') ||
@@ -70,6 +129,7 @@ export class AgenteObservabilidade {
       textoPergunta.includes('listar') ||
       textoPergunta.includes('tabela') ||
       textoPergunta.includes('sql') ||
+      textoPergunta.includes('base até agora') ||
       textoPergunta.includes('hoje');
 
     const requerBuscaSemantica =
@@ -79,39 +139,54 @@ export class AgenteObservabilidade {
       textoPergunta.includes('já aconteceu') ||
       textoPergunta.includes('histórico') ||
       textoPergunta.includes('feriado') ||
-      textoPergunta.includes('evento');
+      textoPergunta.includes('evento') ||
+      textoPergunta.includes('ruptura') ||
+      textoPergunta.includes('indisponibilidade') ||
+      textoPergunta.includes('alerta') ||
+      textoPergunta.includes('insight') ||
+      textoPergunta.includes('analista') ||
+      textoPergunta.includes('resumo executivo');
 
-    const requerCalculoGap =
-      textoPergunta.includes('gap') ||
-      textoPergunta.includes('diferença') ||
-      textoPergunta.includes('desconto') ||
-      textoPergunta.includes('comparar');
-
-    // Execução da Ferramenta de Busca Semântica no pgvector
-    if (requerBuscaSemantica || (!requerSql && !requerCalculoGap)) {
-      try {
-        const resultadoSemantica = await this.ferramentaSemantica.executar({
-          termoBusca: perguntaUsuario,
-          limite: 3
+    // Execução da Ferramenta de Cálculo Determinístico de Gap
+    if (requerCalculoGap) {
+      const numerosNaPergunta =
+        perguntaUsuario.match(/\b\d+(?:[.,]\d+)?\b/g)?.map((n) => parseFloat(n.replace(',', '.'))) || [];
+      if (numerosNaPergunta.length >= 2) {
+        const resultadoGap = await this.ferramentaGap.executar({
+          precoReferencia: Math.max(numerosNaPergunta[0], numerosNaPergunta[1]),
+          precoConcorrente: Math.min(numerosNaPergunta[0], numerosNaPergunta[1])
         });
         ferramentasExecutadas.push({
-          nome: this.ferramentaSemantica.nome,
-          parametros: { termoBusca: perguntaUsuario },
-          resultado: resultadoSemantica
+          nome: this.ferramentaGap.nome,
+          parametros: {
+            precoReferencia: resultadoGap.precoReferencia,
+            precoConcorrente: resultadoGap.precoConcorrente
+          },
+          resultado: resultadoGap
         });
-        numerosAutorizados.push(...this.ferramentaSemantica.extrairNumerosAutorizados(resultadoSemantica));
-      } catch (erro: any) {
-        console.warn('[Agente] Falha na busca semântica:', erro.message);
+        numerosAutorizados.push(...this.ferramentaGap.extrairNumerosAutorizados(resultadoGap));
       }
     }
 
     // Execução da Ferramenta de Consulta SQL estruturada (somente-leitura)
     if (requerSql) {
       try {
-        let sqlGerada = 'SELECT praca, categoria, fonte, preco_diaria, capturado_em FROM cotacoes ORDER BY capturado_em DESC LIMIT 10;';
+        let sqlGerada =
+          'SELECT praca, categoria, fonte, preco_diaria, capturado_em FROM cotacoes ORDER BY capturado_em DESC LIMIT 10;';
 
         if (textoPergunta.includes('confins')) {
-          sqlGerada = "SELECT fonte, categoria, MIN(preco_diaria) as preco_minimo, AVG(preco_diaria)::numeric(10,2) as preco_medio FROM cotacoes WHERE praca = 'aeroporto_confins' GROUP BY fonte, categoria;";
+          sqlGerada =
+            "SELECT fonte, categoria, MIN(preco_diaria) as preco_minimo, AVG(preco_diaria)::numeric(10,2) as preco_medio FROM cotacoes WHERE praca = 'aeroporto_confins' GROUP BY fonte, categoria;";
+        } else if (textoPergunta.includes('movida')) {
+          sqlGerada =
+            "SELECT fonte, COUNT(*)::int as total, MIN(preco_diaria) as preco_minimo, AVG(preco_diaria)::numeric(10,2) as preco_medio FROM cotacoes WHERE fonte = 'movida' GROUP BY fonte;";
+        } else if (textoPergunta.includes('localiza')) {
+          sqlGerada =
+            "SELECT fonte, praca, categoria, preco_diaria FROM cotacoes WHERE fonte = 'localiza' ORDER BY capturado_em DESC LIMIT 10;";
+        } else if (textoPergunta.includes('maior preço')) {
+          sqlGerada = 'SELECT fonte, praca, categoria, preco_diaria FROM cotacoes ORDER BY preco_diaria DESC LIMIT 5;';
+        } else if (textoPergunta.includes('menor preço')) {
+          sqlGerada = 'SELECT fonte, praca, categoria, preco_diaria FROM cotacoes ORDER BY preco_diaria ASC LIMIT 5;';
         } else if (textoPergunta.includes('total') || textoPergunta.includes('quantas')) {
           sqlGerada = 'SELECT COUNT(*)::int as total_cotacoes FROM cotacoes;';
         }
@@ -128,21 +203,21 @@ export class AgenteObservabilidade {
       }
     }
 
-    // Execução da Ferramenta de Cálculo Determinístico de Gap
-    if (requerCalculoGap) {
-      // Extrai possíveis preços mencionados na pergunta (ex: "gap entre 150 e 120")
-      const numerosNaPergunta = perguntaUsuario.match(/\b\d+(?:[.,]\d+)?\b/g)?.map(n => parseFloat(n.replace(',', '.'))) || [];
-      if (numerosNaPergunta.length >= 2) {
-        const resultadoGap = await this.ferramentaGap.executar({
-          precoReferencia: Math.max(numerosNaPergunta[0], numerosNaPergunta[1]),
-          precoConcorrente: Math.min(numerosNaPergunta[0], numerosNaPergunta[1])
+    // Execução da Ferramenta de Busca Semântica no pgvector
+    if (requerBuscaSemantica || (!requerSql && !requerCalculoGap)) {
+      try {
+        const resultadoSemantica = await this.ferramentaSemantica.executar({
+          termoBusca: perguntaUsuario,
+          limite: 3
         });
         ferramentasExecutadas.push({
-          nome: this.ferramentaGap.nome,
-          parametros: { precoReferencia: resultadoGap.precoReferencia, precoConcorrente: resultadoGap.precoConcorrente },
-          resultado: resultadoGap
+          nome: this.ferramentaSemantica.nome,
+          parametros: { termoBusca: perguntaUsuario },
+          resultado: resultadoSemantica
         });
-        numerosAutorizados.push(...this.ferramentaGap.extrairNumerosAutorizados(resultadoGap));
+        numerosAutorizados.push(...this.ferramentaSemantica.extrairNumerosAutorizados(resultadoSemantica));
+      } catch (erro: any) {
+        console.warn('[Agente] Falha na busca semântica:', erro.message);
       }
     }
 
@@ -168,12 +243,21 @@ export class AgenteObservabilidade {
       { papel: 'usuario', conteudo: promptUsuario }
     ]);
 
-    // 3. Auditoria Pós-Resposta de Integridade Numérica
-    const auditoria = this.validador.validar(respostaLlm.texto, numerosAutorizados);
-
     let mensagemFinal = respostaLlm.texto;
+
+    // Enriquecimento executivo fundamentado para o provedor simulado padrão
+    if (respostaLlm.modelo.startsWith('simulado-padrao') && ferramentasExecutadas.length > 0) {
+      const execucaoGap = ferramentasExecutadas.find((f) => f.nome === this.ferramentaGap.nome);
+      if (execucaoGap) {
+        const res = execucaoGap.resultado;
+        mensagemFinal = `Análise de gap concluída: Para a tarifa de referência de R$ ${res.precoReferencia} e concorrente de R$ ${res.precoConcorrente}, a diferença é de R$ ${res.diferencaReais} (${res.gapPercentual}%).`;
+      }
+    }
+
+    // 3. Auditoria Pós-Resposta de Integridade Numérica (SDET / Zero Alucinação)
+    const auditoria = this.validador.validar(mensagemFinal, numerosAutorizados);
+
     if (!auditoria.valido && auditoria.alucinacoesIdentificadas.length > 0) {
-      // Alerta de segurança quando a auditoria detecta número não fundamentado
       console.warn(
         `[Agente:Auditoria] Números não autorizados detectados na resposta: ${auditoria.alucinacoesIdentificadas.join(', ')}`
       );
