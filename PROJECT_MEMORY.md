@@ -96,13 +96,13 @@
 
 ## 11. Roadmap e status
 
-- [/] **Semana 1:** spike de viabilidade (concluído) · adapter de coleta (concluído) · gravação de HAR / fixtures (concluído) · schema Zod pt-BR (concluído) · Postgres (próximo)
+- [/] **Semana 1:** spike de viabilidade (concluído) · adapter de coleta (concluído) · gravação de HAR / fixtures (concluído) · schema Zod pt-BR (concluído) · Postgres/TimescaleDB DDL (concluído) · persistência e repositório (próximo)
 - [ ] **Semana 2:** validação de qualidade · detecção de anomalias · testes unitários · geração de narrativas
 - [ ] **Semana 3:** pgvector · agente com tools · validador de números · loop de feedback
 - [ ] **Semana 4:** UI Next.js (chat + painel) · evals no CI · README · vídeo 60s · post LinkedIn
 
-**Próximo passo:** Configurar `docker-compose.yml` com Postgres/TimescaleDB e criar a camada de persistência para armazenar as cotações coletadas.
-
+**Ponto exato onde paramos:** `docker-compose.yml` e `banco/init.sql` (TimescaleDB + pgvector + DDL em pt-BR) criados e prontos.
+**Ação imediata ao retomar:** Subir o container (`docker compose up -d`) e criar o repositório de dados TypeScript para salvar as cotações geradas pelo `AdaptadorReplay` na tabela `cotacoes`.
 
 ## 12. Diário de métricas
 
@@ -113,11 +113,12 @@
 ## 13. Perguntas prováveis de entrevista
 
 - Por que não usar só banco vetorial? → Preço é dado numérico estruturado; vetor serve às narrativas.
+- Por que não usar planilha? → Falta de concorrência ACID, sem suporte a pgvector, agregações analíticas lentas e risco de alucinação para o LLM.
 - Como evita alucinação de números? → LLM não calcula; tools + validador pós-resposta.
 - Por que z-score robusto e não ML? → Simples, explicável, resistente a outliers; suficiente para o problema.
 - Como lida com mudança de layout/API? → Contratos Zod + alerta de schema drift.
 - Como testa um agente de IA? → Golden questions, métricas por tipo de erro, prompt injection, CI.
-- Como lida com a ética da coleta? → Dados públicos, volume mínimo, robots.txt, modo replay.
+- Como lida com a ética da coleta? → Dados públicos, volume mínimo, robots.txt, modo replay (ADR 0002).
 
 ## 14. Divulgação (rascunhos a evoluir)
 
@@ -130,15 +131,16 @@
 ```
 fleetpulse/
 ├── apps/
-│   ├── collector/     # Playwright + adapters (live | replay)
+│   ├── coletor/       # Playwright + adaptadores (ao vivo | replay)
 │   ├── api/           # Fastify: agente, tools, validador
 │   └── web/           # Next.js: chat + painel
-├── packages/
-│   ├── schemas/       # Zod compartilhado
-│   └── detection/     # z-score robusto, eventos
+├── pacotes/
+│   ├── esquemas/      # Zod compartilhado (pt-BR)
+│   └── deteccao/      # z-score robusto, eventos
 ├── evals/             # golden questions + runner
-├── fixtures/har/      # respostas gravadas
-├── docs/adr/          # decisões e trade-offs
+├── fixtures/har/      # cotações e respostas gravadas
+├── docs/adr/          # decisões e trade-offs (ADR 0001, ADR 0002)
+├── banco/             # init.sql com TimescaleDB + pgvector
 ├── PROJECT_MEMORY.md
 └── docker-compose.yml
 ```
@@ -150,6 +152,9 @@ fleetpulse/
 - **Antecedência (lead time):** dias entre a cotação e a retirada.
 - **Schema drift:** mudança no formato da resposta da fonte.
 
+## 17. Log de sessões
+
 - **12/10/2026 (Sessão 1):** Escolhida a ideia FleetPulse AI; definidos pipeline, escopo do MVP, decisão por Playwright; criado este arquivo.
-- **12/10/2026 (Sessão 2):** Inicialização do Git; configuração do monorepo com npm workspaces (`apps/coletor`, `pacotes/esquemas`); regra mandatória de código 100% em pt-BR (ADR 0001); execução do Spike Playwright da Localiza: descoberta da arquitetura Angular MDC, ThreatMetrix, Securiti e endpoint `canaisdigitais-api.localiza.com` bloqueado com 403 pelo Akamai WAF; formalização do ADR 0002 (Adaptador Replay com HAR/Fixtures vs Ao Vivo); implementação do `AdaptadorReplay` com validação Zod e 100% de cobertura nos testes unitários com Vitest.
+- **12/10/2026 (Sessão 2):** Inicialização do Git; monorepo em npm workspaces (`apps/coletor`, `pacotes/esquemas`); regra de código 100% em pt-BR (ADR 0001); Spike da Localiza executado (WAF Akamai 403 mapeado); ADR 0002 (Adaptador Replay vs Ao Vivo); `AdaptadorReplay` testado com Vitest (100% aprovado); criados `docker-compose.yml` e `banco/init.sql` com TimescaleDB e pgvector.
+
 

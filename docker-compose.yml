@@ -1,0 +1,23 @@
+services:
+  banco:
+    image: timescale/timescaledb-ha:pg16
+    container_name: fleetpulse-banco
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: fleetpulse
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - dados-banco:/var/lib/postgresql/data
+      - ./banco/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fleetpulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  dados-banco:
+    name: fleetpulse-dados-banco
