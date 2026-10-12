@@ -97,12 +97,12 @@
 ## 11. Roadmap e status
 
 - [x] **Semana 1:** spike de viabilidade (concluído) · adapter de coleta (concluído) · gravação de HAR / fixtures (concluído) · schema Zod pt-BR (concluído) · Postgres/TimescaleDB DDL (concluído) · persistência e repositório (concluído) · pacote @fleetpulse/banco com testes unitários e de integração reais (concluído)
-- [ ] **Semana 2:** validação de qualidade · detecção de anomalias (z-score robusto / MAD em `pacotes/deteccao`) · testes unitários · geração de narrativas
+- [/] **Semana 2:** validação de qualidade e detecção de anomalias com z-score robusto / MAD em `@fleetpulse/deteccao` (concluído) · `RepositorioInsights` no `@fleetpulse/banco` (concluído) · testes automatizados (30 testes aprovados) · geração de narrativas com LLM / pipeline de enriquecimento (próximo)
 - [ ] **Semana 3:** pgvector · agente com tools · validador de números · loop de feedback
 - [ ] **Semana 4:** UI Next.js (chat + painel) · evals no CI · README · vídeo 60s · post LinkedIn
 
-**Ponto exato onde paramos:** Container `fleetpulse-banco` ativo e saudável (porta 5433). Pacote `@fleetpulse/banco` criado com `RepositorioCotacoes` (operações unitárias e lote), `ServicoColeta` em `apps/coletor` integrado, e 11 testes automatizados (unitários + integração real) passando com 100% de sucesso.
-**Ação imediata ao retomar:** Iniciar a Semana 2 do roadmap com a criação de `pacotes/deteccao` (detecção estatística de anomalias com z-score robusto baseado em mediana e MAD, e classificação de eventos de preço).
+**Ponto exato onde paramos:** `pacotes/deteccao` criado com Z-score robusto (mediana e MAD), detectores especializados (`pico_preco`, `concorrente_mais_barato`, `queda_disponibilidade`), `MotorDeteccao` unificado, e `RepositorioInsights` implementado no `@fleetpulse/banco`. Total de 30 testes passando no Vitest com 100% de sucesso.
+**Ação imediata ao retomar:** Implementar a geração de narrativas com LLM para enriquecer os insights detectados (etapa 5 do pipeline: "Explain - só anomalias vão ao LLM, que gera a narrativa explicativa"), mantendo a separação "código calcula, LLM interpreta".
 
 ## 12. Diário de métricas
 
@@ -136,8 +136,8 @@ fleetpulse/
 │   └── web/           # Next.js: chat + painel
 ├── pacotes/
 │   ├── esquemas/      # Zod compartilhado (pt-BR)
-│   ├── banco/         # Pool pg, RepositorioCotacoes (TimescaleDB)
-│   └── deteccao/      # z-score robusto, eventos
+│   ├── banco/         # Pool pg, RepositorioCotacoes, RepositorioInsights (TimescaleDB)
+│   └── deteccao/      # z-score robusto (mediana/MAD), detectores de eventos de preço
 ├── evals/             # golden questions + runner
 ├── fixtures/har/      # cotações e respostas gravadas
 ├── docs/adr/          # decisões e trade-offs (ADR 0001, ADR 0002)
@@ -158,6 +158,8 @@ fleetpulse/
 - **12/10/2026 (Sessão 1):** Escolhida a ideia FleetPulse AI; definidos pipeline, escopo do MVP, decisão por Playwright; criado este arquivo.
 - **12/10/2026 (Sessão 2):** Inicialização do Git; monorepo em npm workspaces (`apps/coletor`, `pacotes/esquemas`); regra de código 100% em pt-BR (ADR 0001); Spike da Localiza executado (WAF Akamai 403 mapeado); ADR 0002 (Adaptador Replay vs Ao Vivo); `AdaptadorReplay` testado com Vitest (100% aprovado); criados `docker-compose.yml` e `banco/init.sql` com TimescaleDB e pgvector.
 - **12/10/2026 (Sessão 3):** Inicialização do Docker com porta configurável 5433 para evitar conflito com instâncias locais; container TimescaleDB com pgvector validado e saudável; criação do pacote compartilhado `@fleetpulse/banco` com conexão, pool e `RepositorioCotacoes` (suporte a inserção em lote otimizada para séries temporais e filtros dinâmicos); criação do `ServicoColeta` em `apps/coletor`; suíte com 11 testes unitários e de integração real passando no Vitest com 100% de sucesso.
+- **12/10/2026 (Sessão 4):** Criação do pacote `@fleetpulse/deteccao` com estatística robusta determinística (mediana, MAD e Z-score modificado com fator normal 1.4826 imune a outliers); implementação dos detectores especializados (`pico_preco`, `concorrente_mais_barato`, `queda_disponibilidade`); implementação do `MotorDeteccao` unificado; implementação do `RepositorioInsights` no `@fleetpulse/banco` com suporte a persistência em lote e atualização de status para human-in-the-loop; suíte completa agora com 30 testes unitários e de integração reais passando com 100% no Vitest.
+
 
 
 
