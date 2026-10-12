@@ -120,27 +120,30 @@
 - Como testa um agente de IA? → Golden questions, métricas por tipo de erro, prompt injection, CI.
 - Como lida com a ética da coleta? → Dados públicos, volume mínimo, robots.txt, modo replay (ADR 0002).
 
-## 14. Divulgação (rascunhos a evoluir)
+## 14. Divulgação (concluído)
 
-- **README:** problema → demo (GIF/vídeo 60s) → diagrama → decisões e trade-offs (ADRs) → métricas reais → ética.
-- **Roteiro do vídeo (60s):** alerta no painel → pergunta no chat ("já aconteceu em outros feriados?") → resposta com números + validador → badge de CI verde.
-- **Post LinkedIn:** _(a escrever)_
+- **README:** Documentação técnica completa com arquitetura Mermaid, tabela de evals, guia de execução e notas éticas (`README.md`).
+- **Roteiro do vídeo (60s):** Storyboard segundo a segundo com falas, telas e transições (`docs/roteiro-video-60s.md`).
+- **Post LinkedIn:** Duas opções de copywriting profissional com foco em SDET, QA de IA e "LLM não calcula" (`docs/post-linkedin.md`).
+- **CI / GitHub Actions:** Pipeline automatizado rodando TimescaleDB, pgvector, 53 testes, 30 Golden Questions e build Next.js (`.github/workflows/ci.yml`).
+- **Semeadura / Seed:** Script executável que gera 162 cotações e 5 anomalias vetorizadas com HNSW no PostgreSQL (`npm run semear`).
 
 ## 15. Estrutura do repositório (alvo)
 
 ```
 fleetpulse/
+├── .github/workflows/ # ci.yml com pipeline automatizado no GitHub Actions
 ├── apps/
-│   ├── coletor/       # Playwright + adaptadores (ao vivo | replay) + ServicoColeta
+│   ├── coletor/       # Playwright + adaptadores + executavel-carga (semeadura de dados)
 │   ├── api/           # Fastify: agente, 3 tools, validador de chat, rotas
-│   └── web/           # Next.js: chat + painel
+│   └── web/           # Next.js: chat + painel (Vanilla CSS)
 ├── pacotes/
 │   ├── esquemas/      # Zod compartilhado (pt-BR)
 │   ├── banco/         # Pool pg, RepositorioCotacoes, RepositorioInsights, pgvector, feedback
 │   └── deteccao/      # z-score robusto, detectores e narrador LLM com validador anti-alucinação
-├── evals/             # golden questions + runner
+├── evals/             # 30 golden questions + runner Vitest
 ├── fixtures/har/      # cotações e respostas gravadas
-├── docs/adr/          # decisões e trade-offs (ADR 0001, ADR 0002)
+├── docs/              # ADRs, roteiro do vídeo de 60s, post do LinkedIn
 ├── banco/             # init.sql com TimescaleDB + pgvector + HNSW
 ├── PROJECT_MEMORY.md
 └── docker-compose.yml
@@ -162,6 +165,7 @@ fleetpulse/
 - **12/10/2026 (Sessão 5):** Implementação da Etapa 5 do pipeline ("Explain: LLM gera narrativa para anomalias"); criação dos contratos de LLM, `ProvedorSimulado` (para testes e CI determinísticos) e `ProvedorHttp` (OpenAI / Gemini / Ollama); implementação do `ValidadorNumerico` pós-resposta (audita todos os números citados pelo LLM contra as métricas calculadas para garantir zero alucinação numérica); implementação do `GeradorNarrativa` com retry e fallback seguro; 38 testes passando com 100% de aprovação.
 - **12/10/2026 (Sessão 6):** Implementação da Semana 3 completa: índice HNSW vetorial no PostgreSQL/TimescaleDB; serviço de embeddings determinístico e HTTP; busca por similaridade de cosseno no `RepositorioInsights`; `RepositorioFeedback` para Human-in-the-Loop; perfil de conexão restrito `leitor_agente` com bloqueio de mutações; criação de `apps/api` com Fastify e rotas `/api/chat`, `/api/insights`, `/api/cotacoes`, `/api/saude`; implementação das 3 ferramentas especializadas (`ferramentaConsultaSql`, `ferramentaBuscaSemantica`, `ferramentaCalculoGap`); implementação do `AgenteObservabilidade` e do `ValidadorRespostaChat`; 53 testes automatizados passando 100% no Vitest.
 - **12/10/2026 (Sessão 7):** Conclusão da Semana 4 do Roadmap: implementação do frontend web interativo em Next.js 16 (`apps/web`) sem dependência de Tailwind CSS, com tema dark premium, dashboard de KPIs, radar de anomalias com botões de feedback humano, e chat conversacional com o agente (exibição de auditoria numérica e ferramentas acionadas); criação do banco de 30 Golden Questions (`evals/perguntas-douradas.json`); desenvolvimento do `AvaliadorAgente` e da suíte de teste de evals (`evals/runner.test.ts`); aprimoramento dos guardrails de injeção de prompt e recusa sem dados no `AgenteObservabilidade`; 100% de aprovação no benchmark de evals e 54 suítes de teste passando no monorepo.
+- **12/10/2026 (Sessão 8):** Implementação do executável de carga e semeadura (`apps/coletor/src/executavel-carga.ts`) com inserção de 162 cotações no TimescaleDB e 5 insights com embeddings de 1536 dimensões indexados via HNSW no pgvector (`npm run semear`); criação do pipeline de CI do GitHub Actions (`.github/workflows/ci.yml`); elaboração do roteiro de vídeo de 60 segundos (`docs/roteiro-video-60s.md`) e do rascunho de divulgação para o LinkedIn (`docs/post-linkedin.md`).
 
 
 

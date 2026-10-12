@@ -11,6 +11,7 @@
     "coletor:spike": "npm run spike:localiza --workspace=@fleetpulse/coletor",
     "testar": "npm run testar --workspaces --if-present",
     "compilar": "npm run compilar --workspaces --if-present",
+    "semear": "npm run semear --workspace=@fleetpulse/coletor",
     "evals": "vitest run evals/runner.test.ts"
   },
   "devDependencies": {

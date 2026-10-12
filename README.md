@@ -128,19 +128,25 @@ fleetpulse-ai/
    ```
    *O container TimescaleDB com suporte a pgvector subirá na porta mapeada `5433:5432`.*
 
-3. **Executar a Suíte Completa de Testes:**
+3. **Executar a Carga Inicial de Dados de Mercado (Seed):**
+   ```bash
+   npm run semear
+   ```
+   *Popula 162 cotações na hypertable e indexa 5 anomalias com embeddings de 1536 dimensões via HNSW no pgvector.*
+
+4. **Executar a Suíte Completa de Testes:**
    ```bash
    npm run testar
    ```
    *Executa 53 testes automatizados cobrindo todos os pacotes e aplicações.*
 
-4. **Executar a Suíte de Evals de IA:**
+5. **Executar a Suíte de Evals de IA:**
    ```bash
    npm run evals
    ```
    *Roda o benchmark das 30 perguntas douradas, exibindo a tabela oficial de acurácia.*
 
-5. **Iniciar os Serviços em Modo Desenvolvimento:**
+6. **Iniciar os Serviços em Modo Desenvolvimento:**
    - **Terminal 1 (API Fastify):**
      ```bash
      npm run desenvolvimento --workspace=@fleetpulse/api

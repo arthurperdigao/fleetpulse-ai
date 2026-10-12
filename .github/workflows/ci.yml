@@ -1,0 +1,74 @@
+name: CI - FleetPulse AI Quality Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  qualidade-e-testes:
+    name: Testes Automatizados, Evals de IA e Build
+    runs-on: ubuntu-latest
+
+    services:
+      timescaledb:
+        image: timescale/timescaledb-ha:pg16
+        env:
+          POSTGRES_DB: fleetpulse
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Instalar Dependências
+        run: npm ci
+
+      - name: Inicializar Esquema DDL do Banco (TimescaleDB + pgvector)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -p 5432 -U postgres -d fleetpulse -f banco/init.sql
+
+      - name: Compilar Workspaces TypeScript
+        run: npm run compilar
+
+      - name: Executar 53 Testes Automatizados de Qualidade
+        env:
+          BANCO_HOST: localhost
+          BANCO_PORTA: 5432
+          BANCO_NOME: fleetpulse
+          BANCO_USUARIO: postgres
+          BANCO_SENHA: postgres
+          LEITOR_BANCO_USUARIO: leitor_agente
+          LEITOR_BANCO_SENHA: leitor_agente_senha
+        run: npm run testar
+
+      - name: Executar Benchmark de Evals de IA (30 Golden Questions)
+        env:
+          BANCO_HOST: localhost
+          BANCO_PORTA: 5432
+          BANCO_NOME: fleetpulse
+          BANCO_USUARIO: postgres
+          BANCO_SENHA: postgres
+          LEITOR_BANCO_USUARIO: leitor_agente
+          LEITOR_BANCO_SENHA: leitor_agente_senha
+        run: npm run evals
+
+      - name: Build de Produção do Frontend Next.js
+        run: npm run build --workspace=@fleetpulse/web
