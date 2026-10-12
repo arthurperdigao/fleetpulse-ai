@@ -5,3 +5,8 @@ export * from './detectores/detector-pico-preco.js';
 export * from './detectores/detector-concorrente.js';
 export * from './detectores/detector-disponibilidade.js';
 export * from './motor-deteccao.js';
+export * from './explicacao/contrato-llm.js';
+export * from './explicacao/provedor-simulado.js';
+export * from './explicacao/provedor-http.js';
+export * from './explicacao/validador-numerico.js';
+export * from './explicacao/gerador-narrativa.js';
