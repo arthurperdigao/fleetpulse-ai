@@ -1,0 +1,22 @@
+{
+  "name": "fleetpulse-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Observabilidade de preços de mercado e inteligência de anomalias com IA para frotas de locação",
+  "workspaces": [
+    "apps/*",
+    "pacotes/*"
+  ],
+  "scripts": {
+    "coletor:spike": "npm run spike:localiza --workspace=@fleetpulse/coletor",
+    "testar": "npm run testar --workspaces --if-present",
+    "compilar": "npm run compilar --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
