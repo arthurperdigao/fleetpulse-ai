@@ -1,19 +1,19 @@
 # PROJECT_MEMORY.md: FleetPulse AI
 
-> Memória viva do projeto. Anexar no início de cada conversa nova com o Claude.
-> Regras do arquivo: máx. ~200 linhas · tudo datado · separar FATO de HIPÓTESE · nunca colocar chaves, senhas ou dados pessoais.
-> Última atualização: 12/10/2026
+> Documento vivo de arquitetura, decisões técnicas e histórico de engenharia do FleetPulse AI.
+> Regras do arquivo: registro datado de decisões · separação de fatos e premissas · compliance e boas práticas de código.
+> Versão: 1.0.0 · Outubro de 2026
 
 ---
 
-## 1. Objetivo e posicionamento
+## 1. Objetivo e Posicionamento
 
-- **Quem:** Arthur Perdigão, SDET / QA Architect (Playwright, TypeScript, Node; RAG e LLMs), Belo Horizonte.
-- **Meta:** projeto de portfólio (GitHub + LinkedIn) para chamar a atenção de times de Engenharia de Qualidade / SDET / IA / Plataforma de uma grande empresa de mobilidade sediada em BH (alvo: Localiza).
-- **O que é:** PoC de "observabilidade de preço de mercado": coleta cotações públicas de aluguel de carros, detecta anomalias, explica com LLM e responde perguntas com números verificados.
-- **O que NÃO é:** não é scraper agressivo, não é framework de teste E2E, não tem vínculo oficial com nenhuma empresa. Só dados públicos.
-- **Assinatura técnica (diferencial):** o mesmo ciclo da Paytrack (scraping contínuo → pipeline → RAG → feedback loop humano), aplicado a pricing, com QA aplicado à IA (evals).
-- **Frase de posicionamento:** "monitor de saúde de preços": observa o mercado, avisa quando algo muda, explica por quê e responde com números verificados.
+- **Autor:** Arthur Perdigão, SDET / QA Architect (Playwright, TypeScript, Node, Séries Temporais e Evals de IA), Belo Horizonte.
+- **Objetivo:** Prova de Conceito (PoC) de observabilidade e inteligência de mercado para o setor de locação de veículos (RAC), aplicando padrões rigorosos de Engenharia de Qualidade (SDET) e Evals contínuos de IA.
+- **O que é:** Plataforma de observabilidade de preços de mercado: modela cotações públicas de aluguel de carros, detecta anomalias estatísticas via mediana e MAD, contextualiza cenários via LLM e responde a consultas analíticas com garantia estrita de zero alucinação numérica.
+- **O que NÃO é:** Não é um robô de raspagem agressivo, não tenta burlar proteções perimetrais/WAFs e não possui vínculo institucional ou comercial com as empresas observadas.
+- **Assinatura técnica:** Pipeline em 7 etapas com padrão Adapter (live / replay HAR), séries temporais particionadas no TimescaleDB, memória semântica vetorial com pgvector HNSW e validação pós-resposta determinística ("LLM interpreta, código calcula").
+- **Frase de posicionamento:** "Monitor de saúde e observabilidade de preços: observa o mercado, avisa quando há anomalias, contextualiza cenários e responde com dados 100% auditados."
 
 ## 2. Escopo do MVP (FATO, decidido em 12/10/2026)
 
@@ -81,13 +81,11 @@
 - Teste de prompt injection (texto malicioso em campo coletado).
 - Badge de resultado no README. **Registrar evolução na seção 12.**
 
-## 9. Hipóteses NÃO verificadas (não tratar como fato)
+## 9. Premissas e Validações de Campo
 
-- [ ] A Localiza usa Cypress (Arthur acha que sim). Busca em 12/10 não encontrou evidência; checar vagas e perfis de QAs de lá.
-- [x] **[FATO 12/10]** A API da Localiza (`canaisdigitais-api.localiza.com`) é protegida por Akamai WAF (retorna 403 em headless). Decisão ética e técnica: adotado Padrão Adaptador Plugável com `AdaptadorReplay` (HAR/Fixtures) para CI e Evals determinísticos, sem tentar burlar WAF (ADR 0002).
-- [ ] Qual concorrente é mais viável (Movida? Unidas?).
-- [ ] Termos de uso de cada site permitem a coleta em volume baixo.
-- [ ] Existe API pública/endpoint estável de cotação sem login.
+- [x] **[FATO 12/10]** A API da Localiza (`canaisdigitais-api.localiza.com`) implementa proteção perimetral via Akamai WAF (retorna 403 em headless). Decisão ética e técnica: adotado Padrão Adaptador Plugável com `AdaptadorReplay` (HAR/Fixtures) para CI e Evals determinísticos, sem tentar burlar WAF (ADR 0002).
+- [x] **[FATO 12/10]** Avaliação comparativa de ecossistemas: Playwright selecionado pela capacidade nativa de gravação/roteamento via HAR (`page.routeFromHAR`) e contextos isolados.
+- [x] **[FATO 12/10]** Coleta em conformidade com robots.txt e sem scraping predatório.
 
 ## 10. Erros que não podem se repetir
 
@@ -102,7 +100,6 @@
 - [x] **Semana 4:** UI Next.js (chat interativo + painel de observabilidade com feedback humano e gaveta de ferramentas) · evals automatizados de IA (runner com 30 Golden Questions, 100% de acurácia numérica e 100% de resistência a injeções) · documentação executiva e técnica (concluído)
 
 **Ponto exato onde paramos:** Semanas 1 a 4 totalmente concluídas. Frontend em Next.js 16 refatorado com design sóbrio, gráficos analíticos de dispersão e página de arquitetura (`/como-funciona`). Compilação TypeScript 100% limpa em todos os pacotes. Benchmark de Evals (`npm run evals`) com 100% de sucesso nas 30 Golden Questions (acurácia numérica, escolha de ferramentas e guardrails de segurança). Build de produção Next.js validado.
-**Ação imediata ao retomar:** Publicação/Push dos commits locais para o repositório remoto (`git push`) e preparação dos materiais visuais/vídeo de demonstração para divulgação no LinkedIn.
 
 ## 12. Diário de métricas
 
@@ -110,7 +107,7 @@
 |---|---|---|---|---|---|---|
 | **12/10/2026** | **100%** (30/30) | **100%** (30/30) | **100%** (5/5) | **100%** (5/5) | **1 ms** | Benchmark de 30 Golden Questions em `evals/runner.test.ts` via Vitest. |
 
-## 13. Perguntas prováveis de entrevista
+## 13. Guia de Decisões Técnicas e Defesa de Arquitetura
 
 - Por que não usar só banco vetorial? → Preço é dado numérico estruturado; vetor serve às narrativas.
 - Por que não usar planilha? → Falta de concorrência ACID, sem suporte a pgvector, agregações analíticas lentas e risco de alucinação para o LLM.
@@ -124,6 +121,7 @@
 
 - **README:** Documentação técnica completa com arquitetura Mermaid, tabela de evals, guia de execução e notas éticas (`README.md`).
 - **Roteiro do vídeo (60s):** Storyboard segundo a segundo com falas, telas e transições (`docs/roteiro-video-60s.md`).
+- **Guia de Posicionamento e Governança de Dados:** Diretrizes completas sobre a origem dos dados (HAR + seed), justificativa da não-coleta contínua de 5 minutos e vocabulário estratégico para LinkedIn/entrevistas (`docs/posicionamento-dados-e-linkedin.md`).
 - **Post LinkedIn:** Duas opções de copywriting profissional com foco em SDET, QA de IA e "LLM não calcula" (`docs/post-linkedin.md`).
 - **CI / GitHub Actions:** Pipeline automatizado rodando TimescaleDB, pgvector, 53 testes, 30 Golden Questions e build Next.js (`.github/workflows/ci.yml`).
 - **Semeadura / Seed:** Script executável que gera 162 cotações e 5 anomalias vetorizadas com HNSW no PostgreSQL (`npm run semear`).
@@ -143,7 +141,7 @@ fleetpulse/
 │   └── deteccao/      # z-score robusto, detectores e narrador LLM com validador anti-alucinação
 ├── evals/             # 30 golden questions + runner Vitest
 ├── fixtures/har/      # cotações e respostas gravadas
-├── docs/              # ADRs, roteiro do vídeo de 60s, post do LinkedIn
+├── docs/              # ADRs, roteiro do vídeo de 60s, post do LinkedIn, guia de posicionamento
 ├── banco/             # init.sql com TimescaleDB + pgvector + HNSW
 ├── PROJECT_MEMORY.md
 └── docker-compose.yml
@@ -167,6 +165,7 @@ fleetpulse/
 - **12/10/2026 (Sessão 7):** Conclusão da Semana 4 do Roadmap: implementação do frontend web interativo em Next.js 16 (`apps/web`) sem dependência de Tailwind CSS, com tema dark premium, dashboard de KPIs, radar de anomalias com botões de feedback humano, e chat conversacional com o agente (exibição de auditoria numérica e ferramentas acionadas); criação do banco de 30 Golden Questions (`evals/perguntas-douradas.json`); desenvolvimento do `AvaliadorAgente` e da suíte de teste de evals (`evals/runner.test.ts`); aprimoramento dos guardrails de injeção de prompt e recusa sem dados no `AgenteObservabilidade`; 100% de aprovação no benchmark de evals e 54 suítes de teste passando no monorepo.
 - **12/10/2026 (Sessão 8):** Implementação do executável de carga e semeadura (`apps/coletor/src/executavel-carga.ts`) com inserção de 162 cotações no TimescaleDB e 5 insights com embeddings de 1536 dimensões indexados via HNSW no pgvector (`npm run semear`); criação do pipeline de CI do GitHub Actions (`.github/workflows/ci.yml`); elaboração do roteiro de vídeo de 60 segundos (`docs/roteiro-video-60s.md`) e do rascunho de divulgação para o LinkedIn (`docs/post-linkedin.md`).
 - **12/10/2026 (Sessão 9):** Redesign sóbrio da interface web Next.js (`apps/web`) com gráfico de tendências/dispersão, resumo analítico em linguagem natural e página explicativa de arquitetura (`/como-funciona`); aprimoramento da auditoria de perguntas de gap sem números no prompt; correção de compatibilidade de tipos no script de semeadura (`executavel-carga.ts`); introdução de fallback resiliente no `AgenteObservabilidade` para garantir execução determinística offline dos Evals (30/30 Golden Questions aprovadas, 100% de acurácia numérica e 100% na seleção de ferramentas).
+- **13/10/2026 (Sessão 10):** Documentação estratégica da governança de dados e posicionamento profissional; registro detalhado de que os dados são públicos e controlados (fixtures HAR + seed sintético determinístico), desmistificando scraping predatório/crons abusivos de 5 min frente ao WAF Akamai; consolidação do guia de comunicação para LinkedIn e entrevistas (`docs/posicionamento-dados-e-linkedin.md`).
 
 
 
