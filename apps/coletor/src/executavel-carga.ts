@@ -40,7 +40,7 @@ async function semearBaseDeDados() {
   const repoCotacoes = new RepositorioCotacoes();
   const repoInsights = new RepositorioInsights();
   const motor = new MotorDeteccao();
-  const narrador = new GeradorNarrativa({ provedorLlm: new ProvedorSimulado() });
+  const narrador = new GeradorNarrativa({ provedor: new ProvedorSimulado() });
   const geradorEmbeddings = new GeradorEmbeddingsSimulado();
 
   const agora = new Date();

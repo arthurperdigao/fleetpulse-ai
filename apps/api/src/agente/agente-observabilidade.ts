@@ -207,9 +207,10 @@ export class AgenteObservabilidade {
 
     // Execução da Ferramenta de Consulta SQL estruturada (somente-leitura)
     if (requerSql) {
+      let sqlGerada =
+        'SELECT praca, categoria, fonte, preco_diaria, capturado_em FROM cotacoes ORDER BY capturado_em DESC LIMIT 10;';
+
       try {
-        let sqlGerada =
-          'SELECT praca, categoria, fonte, preco_diaria, capturado_em FROM cotacoes ORDER BY capturado_em DESC LIMIT 10;';
 
         if (textoPergunta.includes('confins')) {
           sqlGerada =
@@ -237,6 +238,11 @@ export class AgenteObservabilidade {
         numerosAutorizados.push(...this.ferramentaSql.extrairNumerosAutorizados(resultadoSql));
       } catch (erro: any) {
         console.warn('[Agente] Falha na consulta SQL:', erro.message);
+        ferramentasExecutadas.push({
+          nome: this.ferramentaSql.nome,
+          parametros: { consultaSql: sqlGerada },
+          resultado: { linhas: [], totalLinhas: 0, colunas: [], tempoExecucaoMs: 0, erro: erro.message }
+        });
       }
     }
 
@@ -255,6 +261,11 @@ export class AgenteObservabilidade {
         numerosAutorizados.push(...this.ferramentaSemantica.extrairNumerosAutorizados(resultadoSemantica));
       } catch (erro: any) {
         console.warn('[Agente] Falha na busca semântica:', erro.message);
+        ferramentasExecutadas.push({
+          nome: this.ferramentaSemantica.nome,
+          parametros: { termoBusca: perguntaUsuario },
+          resultado: { insights: [], totalEncontrado: 0, tempoBuscaMs: 0, erro: erro.message }
+        });
       }
     }
 
