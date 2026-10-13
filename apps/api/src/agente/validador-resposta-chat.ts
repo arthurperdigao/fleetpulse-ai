@@ -27,12 +27,28 @@ export class ValidadorRespostaChat {
     this.numerosIgnorados = new Set([2024, 2025, 2026, 2027, 24, 7, 1, 2, 3]); // Referências temporais e contagens ordinais comuns
   }
 
-  validar(respostaTexto: string, numerosDasFerramentas: number[]): ResultadoAuditoriaChat {
+  validar(
+    respostaTexto: string,
+    numerosDasFerramentas: number[],
+    opcoes?: { exigeNumeros?: boolean }
+  ): ResultadoAuditoriaChat {
     const numerosCitadosBrutos = extrairNumerosDoTexto(respostaTexto);
     const numerosCitados = numerosCitadosBrutos.filter((n) => !this.numerosIgnorados.has(n));
 
     const autorizados = new Set(numerosDasFerramentas);
     const alucinacoes: number[] = [];
+
+    // Se a pergunta era estritamente quantitativa/numérica, a ausência de números é uma falha de atendimento
+    if (opcoes?.exigeNumeros && numerosCitados.length === 0) {
+      return {
+        valido: false,
+        numerosCitados: [],
+        numerosAutorizados: Array.from(autorizados),
+        alucinacoesIdentificadas: [],
+        motivoReprovacao:
+          'A pergunta exigia análise quantitativa ou tarifária, mas a resposta não apresentou números verificados.'
+      };
+    }
 
     for (const citado of numerosCitados) {
       const coincide = Array.from(autorizados).some((esperado) => {

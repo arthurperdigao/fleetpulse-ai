@@ -24,4 +24,29 @@ describe('AgenteObservabilidade - Orquestração e Auditoria', () => {
     expect(resposta.auditoria.valido).toBe(true);
     expect(resposta.auditoria.alucinacoesIdentificadas.length).toBe(0);
   });
+
+  it('deve resolver pergunta de gap sem números no prompt buscando dados da base', async () => {
+    const agente = new AgenteObservabilidade();
+    const resposta = await agente.processarPergunta('Qual o gap de preço entre Localiza e Movida?');
+
+    const nomesFerramentas = resposta.ferramentasExecutadas.map((f) => f.nome);
+    expect(nomesFerramentas).toContain('calculo_gap_mercado');
+    expect(resposta.auditoria.valido).toBe(true);
+    expect(resposta.auditoria.numerosCitados.length).toBeGreaterThan(0);
+    expect(resposta.mensagem).toMatch(/\d+/); // Contém números calculados
+  });
+
+  it('deve reprovar auditoria se pergunta quantitativa de gap não apresentar números na resposta', async () => {
+    // Provedor simulado retornando texto sem números
+    const provedorVazio = new ProvedorSimulado({
+      respostasPreDefinidas: ['Avaliamos os preços e o mercado está dinâmico sem alteração perceptível.']
+    });
+
+    const agente = new AgenteObservabilidade({ provedorLlm: provedorVazio });
+    const resposta = await agente.processarPergunta('Qual a diferença e gap entre 150 e 120?');
+
+    // Validador deve acusar falha por ausência de números quando exigido
+    expect(resposta.auditoria.valido).toBe(false);
+    expect(resposta.auditoria.motivoReprovacao).toContain('análise quantitativa');
+  });
 });
