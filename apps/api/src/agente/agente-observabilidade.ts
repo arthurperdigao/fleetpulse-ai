@@ -287,7 +287,11 @@ export class AgenteObservabilidade {
       const execucaoGap = ferramentasExecutadas.find((f) => f.nome === this.ferramentaGap.nome);
       if (execucaoGap) {
         const res = execucaoGap.resultado;
-        mensagemFinal = `Análise de gap competitivo concluída: com a Localiza a R$ ${res.precoReferencia.toFixed(2)} e a Movida a R$ ${res.precoConcorrente.toFixed(2)}, a diferença é de R$ ${res.diferencaReais.toFixed(2)} e o gap é de −${res.gapPercentual.toFixed(1)}% a favor da concorrência.`;
+        const pRef = res.precoReferencia.toFixed(2).replace('.', ',');
+        const pConc = res.precoConcorrente.toFixed(2).replace('.', ',');
+        const pDiff = res.diferencaReais.toFixed(2).replace('.', ',');
+        const pGap = res.gapPercentual.toFixed(1).replace('.', ',');
+        mensagemFinal = `Análise de gap competitivo concluída: com a Localiza a R$ ${pRef} e a Movida a R$ ${pConc}, a diferença é de R$ ${pDiff} e o gap é de −${pGap}% a favor da concorrência.`;
       }
     }
 
