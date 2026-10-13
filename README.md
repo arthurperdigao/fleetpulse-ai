@@ -1,183 +1,149 @@
-# 🚗 FleetPulse AI
+# FleetPulse AI
 
-> **Observabilidade de Preços de Mercado e Inteligência de Frotas com IA & QA Aplicado de Ponta a Ponta**  
-> *Monorepo em TypeScript · PostgreSQL + TimescaleDB + pgvector · Fastify · Next.js · Evals Automatizados*
+Plataforma de monitoramento de preços de locação de veículos (RAC) em Belo Horizonte, com detecção estatística de anomalias tarifárias e assistente de consulta auditado contra alucinações numéricas.
 
-[![Testes Automatizados](https://img.shields.io/badge/Testes-54%20passando%20(100%25)-success?style=for-the-badge&logo=vitest)](file:///evals/runner.test.ts)
-[![Acurácia Numérica](https://img.shields.io/badge/Zero%20Alucina%C3%A7%C3%A3o-100%25%20Auditado-blue?style=for-the-badge)](file:///evals/perguntas-douradas.json)
-[![Resistência a Injeção](https://img.shields.io/badge/Prompt%20Injection-100%25%20Bloqueado-red?style=for-the-badge)](file:///apps/api/src/agente/agente-observabilidade.ts)
-[![Stack](https://img.shields.io/badge/Stack-Node.js%2022%20%7C%20Fastify%20%7C%20Next.js%2016-purple?style=for-the-badge)](file:///package.json)
+[![Testes](https://img.shields.io/badge/Testes-54%20passando-success?style=flat-square&logo=vitest)](file:///evals/runner.test.ts)
+[![Evals](https://img.shields.io/badge/Evals%20IA-100%25%20Acurácia-blue?style=flat-square)](file:///evals/perguntas-douradas.json)
+[![Stack](https://img.shields.io/badge/Stack-TypeScript%20%7C%20Fastify%20%7C%20Next.js-purple?style=flat-square)](file:///package.json)
 
 ---
 
-## 🎯 1. O Problema de Negócio
+## Visão Geral
 
-No setor de locação de veículos (RAC), a volatilidade de preços é extrema. Companhias como **Localiza**, **Movida** e **Unidas** ajustam tarifas diariamente por praça (aeroportos, centros urbanos) e categoria (econômicos, SUVs, sedãs) com base em sazonalidade, eventos e taxas de ocupação.
+O **FleetPulse AI** coleta cotações públicas de tarifas de locadoras (Localiza, Movida, Unidas) em Belo Horizonte (Confins, Pampulha, Savassi), armazena o histórico em séries temporais e identifica desvios de preços (picos atípicos, descontos agressivos da concorrência e indisponibilidade).
 
-Para frotistas, analistas de precificação (pricing) e gestores de receita (revenue management), identificar movimentos agressivos da concorrência através de checagens manuais ou planilhas estáticas gera:
-1. **Perda de receita** por reação tardia a reduções bruscas de tarifas dos concorrentes.
-2. **Falta de contexto histórico**, dificultando saber se uma variação tarifária já ocorreu em feriados anteriores.
-3. **Risco crítico de alucinação numérica** em ferramentas convencionais de IA generativa, que inventam valores financeiros ao analisar tabelas.
+A premissa central de arquitetura do projeto é: **"LLM interpreta, código calcula"**. 
 
-O **FleetPulse AI** resolve esse gargalo ao combinar **engenharia de dados para séries temporais**, **estatística não-paramétrica imune a outliers**, **busca vetorial semântica** e **garantia de zero alucinação numérica** através de auditoria pós-resposta com assinatura técnica de SDET (Software Development Engineer in Test).
+Modelos de linguagem não são calculadoras; em finanças e precificação, confiar em contas feitas por LLMs gera erros graves. Por isso, todas as contas matemáticas e consultas são feitas por código determinístico e validadas por uma suíte de testes antes da exibição ao usuário.
 
 ---
 
-## 🏗️ 2. Arquitetura do Pipeline em 7 Etapas
-
-O sistema opera através de um pipeline desacoplado e resiliente:
+## Arquitetura do Pipeline
 
 ```mermaid
 flowchart LR
-    A["1. Coletar\n(Playwright / HAR)"] --> B["2. Validar\n(Zod Schemas)"]
-    B --> C["3. Armazenar\n(TimescaleDB)"]
-    C --> D["4. Detectar\n(Z-Score Robusto / MAD)"]
-    D --> E["5. Explicar\n(LLM + Validador Pós-Resposta)"]
-    E --> F["6. Indexar\n(pgvector HNSW)"]
-    F --> G["7. Consumir\n(Agente 3 Ferramentas + Next.js UI)"]
+    A["1. Coleta\n(Playwright / HAR)"] --> B["2. Validação\n(Zod Schemas)"]
+    B --> C["3. Banco Temporal\n(TimescaleDB)"]
+    C --> D["4. Detecção\n(Z-Score / MAD)"]
+    D --> E["5. Explicação\n(LLM + Validador)"]
+    E --> F["6. Indexação\n(pgvector HNSW)"]
+    F --> G["7. Consumo\n(API + UI Next.js)"]
 ```
 
-1. **Coleta Resiliente (`apps/coletor`):** Adaptador dual que alterna entre coleta via Playwright e modo determinístico via fixtures HAR (respeito a WAFs e reprodutibilidade total em CI/CD).
-2. **Validação de Contratos (`pacotes/esquemas`):** Schemas Zod com tipagem estrita em português brasileiro (`pt-BR`) prevenindo *schema drift*.
-3. **Persistência Otimizada (`pacotes/banco`):** PostgreSQL 16 com TimescaleDB (hypertable `cotacoes` particionada no tempo) garantindo consultas analíticas ultrarrápidas.
-4. **Detecção Estatística de Anomalias (`pacotes/deteccao`):** Cálculo de mediana e desvio absoluto da mediana (MAD) com Z-score modificado ($1.4826 \times \text{MAD}$), resistente a outliers reais de mercado.
-5. **Geração de Narrativas & Auditoria Anti-Alucinação (`pacotes/deteccao`):** *"LLM interpreta, código calcula"*. Narrativas executivas geradas por LLM passam por um validador pós-resposta que audita cada dígito citado contra as métricas oficiais calculadas.
-6. **Memória Semântica Vetorial (`pacotes/banco`):** Embeddings de 1536 dimensões indexados com algoritmo **HNSW** (`vector_cosine_ops`), permitindo recuperar anomalias passadas por similaridade de cosseno.
-7. **Consumo Agêntico & Human-in-the-Loop (`apps/api` e `apps/web`):**
-   - Agente de Observabilidade com 3 ferramentas especializadas em TypeScript: Consulta SQL somente-leitura, busca semântica vetorial e cálculo determinístico de gap tarifário.
-   - Dashboard analítico e chat conversacional com interface em Next.js 16 (Vanilla CSS moderno, sem dependência de Tailwind).
-   - Botões de **Human-in-the-Loop (HITL)** para analistas confirmarem ou corrigirem insights de anomalias detectadas.
+1. **Coleta e Replay (`apps/coletor`):** Adaptador com suporte a coleta via Playwright e modo replay determinístico a partir de fixtures HAR, garantindo estabilidade em CI/CD sem dependência de rede externa.
+2. **Contratos e Tipagem (`pacotes/esquemas`):** Schemas estritos em Zod (pt-BR) para validação de dados em runtime e prevenção de *schema drift*.
+3. **Séries Temporais (`pacotes/banco`):** PostgreSQL 16 com TimescaleDB (hypertable `cotacoes` particionada no tempo) para consultas analíticas de histórico e médias móveis.
+4. **Detecção de Anomalias (`pacotes/deteccao`):** Cálculo de mediana e desvio absoluto da mediana (MAD) com Z-score modificado ($1.4826 \times \text{MAD}$). Resistente a outliers reais de mercado.
+5. **Geração de Narrativas & Auditoria (`pacotes/deteccao`):** O LLM gera a narrativa explicativa da anomalia, e um validador pós-resposta audita cada número citado contra as métricas calculadas.
+6. **Memória Vetorial (`pacotes/banco`):** Embeddings de 1536 dimensões indexados com algoritmo HNSW no PostgreSQL (`pgvector`), permitindo busca por similaridade semântica de cenários anteriores.
+7. **Consumo e Interface (`apps/api` e `apps/web`):**
+   - API Fastify com agente baseado em 3 ferramentas: consulta SQL (usuário restrito `leitor_agente`), busca vetorial e cálculo exato de gap.
+   - Painel em Next.js 16 (Vanilla CSS) com gráficos de dispersão, radar de anomalias, botões de feedback do analista (Human-in-the-Loop) e chat conversacional.
 
 ---
 
-## 🛡️ 3. Diferenciais de QA & SDET Aplicado à IA
+## Garantias de Qualidade (SDET & Evals)
 
-Este projeto foi construído sob padrões rigorosos de engenharia de qualidade de software:
+- **Auditoria Pós-Resposta (Zero Alucinação):** Um validador inspeciona a resposta do modelo e compara os números citados com o retorno das ferramentas. Se houver número não fundamentado, a resposta é rejeitada e substituída por fallback determinístico.
+- **Segurança no Banco:** O agente executa consultas sob o perfil PostgreSQL `leitor_agente`, que possui apenas permissão de `SELECT`. Tentativas de mutação (`DROP`, `DELETE`, `UPDATE`) são bloqueadas nativamente.
+- **Guardrails de Domínio:** Perguntas fora do escopo de mobilidade/precificação são recusadas pelo agente sem alucinar respostas.
+- **Benchmark de 30 Perguntas Douradas (Evals):** Suíte automatizada rodando no Vitest via CI, cobrindo consultas estruturadas, busca semântica, cálculo de gap, recusa sem dado e resistência a prompt injection.
 
-| Princípio de Qualidade | Implementação no FleetPulse AI | Benefício no Mundo Real |
-|---|---|---|
-| **Zero Alucinação Numérica** | Validador Pós-Resposta (`ValidadorRespostaChat` e `ValidadorNumerico`) audita cada número da resposta contra as saídas das ferramentas. | Decisões de precificação baseadas em dados 100% auditados. |
-| **Defesa em Profundidade de Banco** | O agente executa SQL usando o perfil restrito `leitor_agente` (somente `SELECT`), com validação estática de regex e bloqueio nativo no PostgreSQL. | Imunidade completa contra `DROP TABLE`, `UPDATE` ou injeções DDL/DML. |
-| **Guardrails de Escopo** | Filtros léxicos e semânticos barram perguntas fora do escopo de mobilidade (ex: cotações em Paris, cotações de commodities ou saldo bancário). | O agente não inventa respostas e recusa perguntas fora do seu domínio. |
-| **Evals Automatizados no CI** | Suíte de benchmark com 30 Golden Questions cobrindo consultas SQL, busca semântica, cálculo de gap, recusa sem dado e prompt injection. | Garantia contínua de regressão zero a cada build. |
-| **Human-in-the-Loop (HITL)** | Loop de feedback onde o analista pode classificar um insight como `falso_positivo`, persistindo a justificativa no PostgreSQL e realimentando o contexto. | Aprimoramento supervisionado contínuo sem re-treinamento opaco de modelos. |
+### Resultado dos Evals (`npm run evals`):
 
----
-
-## 📊 4. Relatório Oficial de Evals (Benchmark das 30 Perguntas Douradas)
-
-Executado via Vitest através do comando `npm run evals` contra o arquivo de benchmark [`evals/perguntas-douradas.json`](file:///evals/perguntas-douradas.json):
-
-```
+```text
 ===============================================================
-       RELATÓRIO OFICIAL DE EVALS - FLEETPULSE AI (SDET)       
+       RELATÓRIO DE EVALS - FLEETPULSE AI (VITEST)
 ===============================================================
 Total de Perguntas Avaliadas:           30
-Acurácia Numérica (Zero Alucinação):    100% (Meta: >= 95%)  ✅
+Acurácia Numérica:                      100% (Meta: >= 95%)  ✅
 Escolha Correta de Ferramentas:         100% (Meta: >= 90%)  ✅
-Taxa de Recusa Sem Dado (Fora Escopo):  100% (Meta: 100%)    ✅
+Taxa de Recusa Fora de Escopo:          100% (Meta: 100%)    ✅
 Resistência a Prompt Injection:         100% (Meta: 100%)    ✅
-Latência Média por Pergunta:            2 ms                 ⚡
+Latência Média por Consulta:            2 ms                 ⚡
 ===============================================================
 ```
 
 ---
 
-## 📂 5. Estrutura do Monorepo
+## Estrutura do Monorepo
 
-O repositório utiliza **npm workspaces** e segue a regra inegociável de código e documentação **100% em Português do Brasil** ([ADR 0001](file:///docs/adr/0001-linguagem-do-codigo.md)):
+O repositório utiliza **npm workspaces** e segue código e documentação em Português do Brasil ([ADR 0001](docs/adr/0001-padronizacao-idioma-e-principios-sdet.md)):
 
-```
+```text
 fleetpulse-ai/
 ├── apps/
 │   ├── coletor/          # Coletor Playwright + Adaptador Replay com fixtures HAR
 │   ├── api/              # API Fastify: Agente, 3 Ferramentas, Validador, Rotas
-│   └── web/              # Interface Web Next.js 16 (Dashboard + Chat de Mercado)
+│   └── web/              # Interface Web Next.js 16 (Dashboard + Chat)
 ├── pacotes/
-│   ├── esquemas/         # Contratos e validações com Zod em pt-BR
+│   ├── esquemas/         # Contratos e validações com Zod
 │   ├── banco/            # Pool PostgreSQL/TimescaleDB, pgvector HNSW, repositórios
-│   └── deteccao/         # Z-score modificado/MAD, detectores e narrativas de IA
+│   └── deteccao/         # Z-score modificado/MAD, detectores e narrativas
 ├── evals/                # 30 Golden Questions e runner automatizado com Vitest
-├── fixtures/har/         # Gravações HAR para testes determinísticos sem depender de rede
-├── docs/adr/             # Decisões de Arquitetura (ADR 0001, ADR 0002)
-├── banco/                # DDL init.sql com TimescaleDB, pgvector e perfis de segurança
-├── PROJECT_MEMORY.md     # Memória técnica viva e diário de métricas do projeto
-└── docker-compose.yml    # Ambiente TimescaleDB HA com pgvector
+├── fixtures/har/         # Fixtures de rede para testes determinísticos
+├── docs/                 # ADRs, demonstração visual e guia de posicionamento
+├── banco/                # DDL init.sql com TimescaleDB e pgvector
+└── docker-compose.yml    # Container PostgreSQL com TimescaleDB e pgvector
 ```
 
 ---
 
-## ⚡ 6. Como Executar o Projeto Localmente
+## Como Executar Localmente
 
 ### Pré-requisitos
-- **Node.js:** versão 20.x ou superior (testado na 22.x)
-- **Docker e Docker Compose** instalados
+- **Node.js** 20.x ou superior
+- **Docker e Docker Compose**
 
-### Passo a Passo
+### Execução
 
-1. **Clonar o Repositório e Instalar Dependências:**
+1. **Instalar dependências:**
    ```bash
-   git clone https://github.com/arthurperdigao/fleetpulse-ai.git
-   cd fleetpulse-ai
    npm install
    ```
 
-2. **Iniciar o Banco de Dados com Docker:**
+2. **Subir o banco de dados:**
    ```bash
    docker compose up -d
    ```
-   *O container TimescaleDB com suporte a pgvector subirá na porta mapeada `5433:5432`.*
+   *(TimescaleDB e pgvector sobem na porta `5433`)*
 
-3. **Executar a Carga Inicial de Dados de Mercado (Seed):**
+3. **Executar a carga inicial (Seed):**
    ```bash
    npm run semear
    ```
-   *Popula 162 cotações na hypertable e indexa 5 anomalias com embeddings de 1536 dimensões via HNSW no pgvector.*
+   *(Popula 162 cotações de referência e 5 anomalias vetorizadas)*
 
-4. **Executar a Suíte Completa de Testes:**
+4. **Executar testes e evals:**
    ```bash
-   npm run testar
+   npm run testar   # Roda os 54 testes unitários e de integração
+   npm run evals    # Executa o benchmark das 30 perguntas de IA
    ```
-   *Executa 53 testes automatizados cobrindo todos os pacotes e aplicações.*
 
-5. **Executar a Suíte de Evals de IA:**
-   ```bash
-   npm run evals
-   ```
-   *Roda o benchmark das 30 perguntas douradas, exibindo a tabela oficial de acurácia.*
-
-6. **Iniciar os Serviços em Modo Desenvolvimento:**
-   - **Terminal 1 (API Fastify):**
+5. **Iniciar aplicação em desenvolvimento:**
+   - **API (Terminal 1):**
      ```bash
      npm run desenvolvimento --workspace=@fleetpulse/api
      ```
-     *Servidor ativo em `http://localhost:3001`.*
+     *(Ativo em `http://localhost:3001`)*
 
-   - **Terminal 2 (Frontend Next.js):**
+   - **Frontend (Terminal 2):**
      ```bash
      npm run dev --workspace=@fleetpulse/web
      ```
-     *Acesse a aplicação em `http://localhost:3000`.*
+     *(Acesse em `http://localhost:3000`)*
 
 ---
 
-## ⚖️ 7. Ética, Compliance e Coleta Responsável
+## Ética e Coleta Responsável
 
-O FleetPulse AI foi concebido seguindo estritos padrões éticos de engenharia de software ([ADR 0002](file:///docs/adr/0002-adaptador-replay-vs-ao-vivo.md)):
-- **Dados Públicos de Tarifas:** Monitora apenas preços disponibilizados publicamente para cotação ao consumidor.
-- **Respeito a Servidores de Terceiros:** Não realiza sobrecarga de requisições nem tentativas de bypass forçado de defesas de borda.
-- **Modo Replay Determinístico:** Para rotinas de integração contínua (CI), desenvolvimento local e evals, são utilizadas gravações legítimas em formato HAR, garantindo taxa zero de tráfego desnecessário aos provedores.
-
----
-
-## 📝 8. Decisões Arquiteturais Registradas (ADRs)
-
-- [ADR 0001: Código, Testes e Documentação 100% em Português do Brasil](file:///docs/adr/0001-linguagem-do-codigo.md)
-- [ADR 0002: Coleta Dual com Adaptador Replay (HAR) e Ao Vivo (Playwright)](file:///docs/adr/0002-adaptador-replay-vs-ao-vivo.md)
+- **Dados Públicos:** Monitora tarifas publicadas para consulta do consumidor geral.
+- **Respeito aos Servidores:** Não executa requisições em alta frequência nem tentativas de burlar defesas perimetrais/WAFs ([ADR 0002](docs/adr/0002-arquitetura-adaptadores-e-resiliencia-har.md)).
+- **Modo Replay:** Para CI/CD, testes de regressão e desenvolvimento diário, utiliza gravações determinísticas em formato HAR, eliminando tráfego desnecessário para serviços de terceiros.
 
 ---
 
-## 👤 Autor
+## Autor
 
 Desenvolvido por **Arthur Perdigão**  
-*Foco em SDET, Engenharia de Qualidade de Software e Observabilidade de IA Generativa.*
+*Engenharia de Qualidade de Software (SDET), Automação de Testes e Avaliação de IA.*

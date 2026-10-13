@@ -2,7 +2,7 @@
   "name": "fleetpulse-ai",
   "version": "0.1.0",
   "private": true,
-  "description": "Observabilidade de preços de mercado e inteligência de anomalias com IA para frotas de locação",
+  "description": "Monitoramento de preços de locação de veículos com detecção de anomalias e assistente auditado contra alucinações",
   "workspaces": [
     "apps/*",
     "pacotes/*"

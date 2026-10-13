@@ -38,3 +38,7 @@ Thumbs.db
 *.har
 *.private.har
 tmp/
+
+# Local notes
+PROJECT_MEMORY.md
+
